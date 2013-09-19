@@ -29,10 +29,12 @@ import javax.script.ScriptEngineFactory;
  */
 public class GosuScriptEngineFactory implements ScriptEngineFactory {
 
-    private static final String ENGINE_NAME = "Gosu";
+    public static final String ENGINE_NAME = "Gosu";
 
     // This was the gosu version that I developed on
-    private static final String GOSU_VERSION = "0.8.6.1-C";
+    //updated to use open source gosu from gosu-lang.org @version 0.10.2 by jeffklein
+    //TODO: jeffklein (9/19/201300): can we get this from maven? perhaps via resource filtering a properties file?
+    private static final String GOSU_VERSION = "0.10.2";
 
     private static final String VERSION = "0.0.1";
     private static final List<String> EXTENSIONS = new ArrayList<String>();

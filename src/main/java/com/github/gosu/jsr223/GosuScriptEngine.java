@@ -15,6 +15,7 @@
  */
 package com.github.gosu.jsr223;
 
+import gw.lang.Gosu;
 import gw.lang.parser.GosuParserFactory;
 import gw.lang.parser.IGosuProgramParser;
 import gw.lang.parser.IParseResult;
@@ -25,7 +26,6 @@ import gw.lang.parser.StandardSymbolTable;
 import gw.lang.parser.ThreadSafeSymbolTable;
 import gw.lang.parser.exceptions.ParseResultsException;
 import gw.lang.reflect.gs.IGosuProgram;
-import gw.lang.shell.Gosu;
 
 import java.io.IOException;
 import java.io.Reader;

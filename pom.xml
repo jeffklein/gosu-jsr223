@@ -19,21 +19,68 @@ limitations under the License.
 
   <groupId>com.github</groupId>
   <artifactId>gosu-jsr223</artifactId>
-  <version>0.0.1</version>
+  <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>JSR 223 Engine for Gosu</name>
 
   <properties>
+    <gosu.version>0.10.2</gosu.version>
+    <junit.version>4.10</junit.version>
   </properties>
 
   <dependencies>
-    <!--
     <dependency>
-      <groupId>gosu</groupId>
-      <artifactId>gw-gosu-core-api</artifactId>
-      <version>0.8.6.1</version>
+      <groupId>org.gosu-lang.gosu</groupId>
+      <artifactId>gosu-core-api</artifactId>
+      <version>${gosu.version}</version>
     </dependency>
-    -->
+    <dependency>
+      <groupId>org.gosu-lang.gosu</groupId>
+      <artifactId>gosu-core</artifactId>
+      <version>${gosu.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gosu-lang.gosu</groupId>
+      <artifactId>gosu-interactive</artifactId>
+      <version>${gosu.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gosu-lang.gosu</groupId>
+      <artifactId>gosu-launcher-api</artifactId>
+      <version>2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gosu-lang.gosu</groupId>
+      <artifactId>gosu-launcher-impl</artifactId>
+      <version>2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gosu-lang.gosu</groupId>
+      <artifactId>gosu-launcher-aether</artifactId>
+      <version>2.2</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
+
+  <repositories>
+    <!-- Gosu -->
+    <repository>
+      <id>gosu-lang.org-releases</id>
+      <name>Official Gosu website (releases)</name>
+      <url>http://gosu-lang.org/nexus/content/groups/releases</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+  </repositories>
+
 
 </project>
