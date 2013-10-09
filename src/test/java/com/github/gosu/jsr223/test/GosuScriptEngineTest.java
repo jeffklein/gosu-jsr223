@@ -37,9 +37,20 @@ public class GosuScriptEngineTest {
     }
 
     @Test
-    public void testInstantiateHelloWorld() throws Exception {
+    public void testInstantiateHelloWorldExplicitly() throws Exception {
         try {
             Object ret = engine.eval("new com.github.gosu.jsr223.test.HelloWorld().printHelloWorld()");
+        } catch (ScriptException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void testInstantiateHelloWorldWithUses() throws Exception {
+        try {
+            Object ret = engine.eval(
+                    "uses com.github.gosu.jsr223.test.HelloWorld\n" +
+                            "new HelloWorld().printHelloWorld()");
         } catch (ScriptException e) {
             e.printStackTrace();
         }
