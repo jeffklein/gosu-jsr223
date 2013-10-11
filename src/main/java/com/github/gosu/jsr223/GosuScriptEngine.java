@@ -16,6 +16,8 @@
 package com.github.gosu.jsr223;
 
 import gw.lang.Gosu;
+import gw.lang.GosuShop;
+import gw.lang.parser.ExternalSymbolMapSymbolTableWrapper;
 import gw.lang.parser.GosuParserFactory;
 import gw.lang.parser.IGosuProgramParser;
 import gw.lang.parser.IParseResult;
@@ -25,18 +27,25 @@ import gw.lang.parser.ParserOptions;
 import gw.lang.parser.StandardSymbolTable;
 import gw.lang.parser.ThreadSafeSymbolTable;
 import gw.lang.parser.exceptions.ParseResultsException;
+import gw.lang.reflect.IPropertyInfo;
+import gw.lang.reflect.IRelativeTypeInfo;
+import gw.lang.reflect.ReflectUtil;
+import gw.lang.reflect.TypeSystem;
 import gw.lang.reflect.gs.IGosuProgram;
-
-import java.io.IOException;
-import java.io.Reader;
+import gw.lang.reflect.gs.IProgramInstance;
 
 import javax.script.AbstractScriptEngine;
 import javax.script.Bindings;
+import javax.script.Invocable;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptException;
 import javax.script.SimpleBindings;
+import java.io.IOException;
+import java.io.Reader;
+import java.lang.reflect.Method;
+import java.util.List;
 
 /**
  * A partial implementation of a JSR 223 {@link ScriptEngine} for the Gosu language. This will work
@@ -52,19 +61,45 @@ import javax.script.SimpleBindings;
  * 
  * @author Greg Orlowski
  */
-public class GosuScriptEngine extends AbstractScriptEngine implements ScriptEngine {
+public class GosuScriptEngine extends AbstractScriptEngine implements Invocable {
 
-    private boolean initialized = false;
+  private boolean initialized = false;
+  private IGosuProgram _gosuProgram;
+  private IProgramInstance _programInstance;
+  private ISymbolTable _symbolTable;
 
-    public GosuScriptEngine() {
+  public GosuScriptEngine() {
         super();
-    }
+  }
 
     private synchronized void init() {
         if (!initialized) {
             Gosu.init();
             initialized = true;
         }
+    }
+
+
+    private ISymbolTable getSymbolTable(ScriptContext context) {
+      ISymbolTable result = GosuShop.createSymbolTable();
+      if (context != null) {
+        Bindings bindings = context.getBindings(ScriptContext.ENGINE_SCOPE);
+        for (String k : bindings.keySet()) {
+          Object v = bindings.get(k);
+          result.putSymbol(GosuShop.createSymbol(k, TypeSystem.get(v.getClass()), v));
+        }
+      }
+      return result;
+    }
+
+    private void unloadSymbolTable(ScriptContext context) {
+      if (context == null) return;
+
+      final List<? extends IPropertyInfo> properties = ((IRelativeTypeInfo) _gosuProgram.getTypeInfo()).getProperties(_gosuProgram);
+      for (IPropertyInfo p : properties) {
+        System.out.println("handling value of var " + p.getDisplayName());
+        context.getBindings(ScriptContext.ENGINE_SCOPE).put(p.getDisplayName(), p.getAccessor().getValue(_programInstance));
+      }
     }
 
     /**
@@ -76,71 +111,104 @@ public class GosuScriptEngine extends AbstractScriptEngine implements ScriptEngi
      * @return the return value of the script
      */
     private Object parseAndExecute(String script, ScriptContext scriptContext) {
-        init();
-        Object ret = null;
-        try {
-            // splitting to multiple lines to ease stack inspection
-            ParserOptions parserOptions = new ParserOptions();
+      init();
+      Object ret = null;
+      try {
+        // splitting to multiple lines to ease stack inspection
+        ParserOptions parserOptions = new ParserOptions();
 
-            // TODO: this is where we could pass values from the ScriptContext to 
-            // the Gosu symbol table (I think)
-            ISymbolTable symbolTable = new StandardSymbolTable(true);
-            IGosuProgramParser parser = getParser();// GosuParserFactory.createProgramParser();
+        // TODO: this is where we could pass values from the ScriptContext to
+          // the Gosu symbol table (I think)
+        _symbolTable = getSymbolTable(scriptContext);
+        IGosuProgramParser parser = getParser();// GosuParserFactory.createProgramParser();
 
-            IParseResult parseResult = parser.parseExpressionOnly(script, symbolTable, parserOptions);
+        IParseResult parseResult = parser.parseExpressionOrProgram(script, _symbolTable, parserOptions);
+        _gosuProgram = parseResult.getProgram();
+        _programInstance = _gosuProgram.getProgramInstance();
+        ret = _programInstance.evaluate(new ExternalSymbolMapSymbolTableWrapper(_symbolTable));
 
-            IGosuProgram gosuProgram = parseResult.getProgram();
-
-            ret = gosuProgram.getProgramInstance().evaluate(null); // evaluate it
-        } catch (ParseResultsException e) {
-            // TODO FIX
-            throw new RuntimeException(e);
-        }
-        return ret;
+        unloadSymbolTable(scriptContext);
+      } catch (ParseResultsException e) {
+          // TODO FIX
+          throw new RuntimeException(e);
+      }
+      return ret;
     }
 
     @Override
     public Object eval(String script, ScriptContext context) throws ScriptException {
-        // TODO: FIX (should use context)
-        return parseAndExecute(script, context);
+      return parseAndExecute(script, context);
     }
 
     @Override
     public Object eval(Reader reader, ScriptContext context) throws ScriptException {
-        return eval(fromReader(reader), context);
+      return eval(fromReader(reader), context);
     }
 
     private static final String fromReader(Reader reader) {
-        StringBuilder sb = new StringBuilder();
-        char[] cbuf = new char[1024];
-        try {
-            for (int numRead = 0; (numRead = reader.read(cbuf)) > 0;)
-                sb.append(String.valueOf(cbuf, 0, numRead));
-        } catch (IOException e) {
-            // TODO temporary:
-            throw new RuntimeException(e);
-        }
-        return sb.toString();
+      StringBuilder sb = new StringBuilder();
+      char[] cbuf = new char[1024];
+      try {
+          for (int numRead = 0; (numRead = reader.read(cbuf)) > 0;)
+              sb.append(String.valueOf(cbuf, 0, numRead));
+      } catch (IOException e) {
+          // TODO temporary:
+          throw new RuntimeException(e);
+      }
+      return sb.toString();
     }
 
     @Override
     public Bindings createBindings() {
-        return new SimpleBindings();
+      return new SimpleBindings();
     }
 
     @Override
     public ScriptEngineFactory getFactory() {
-        // TODO: should this be memoized? Should I keep a reference from the constructor?
-        return new GosuScriptEngineFactory();
+      // TODO: should this be memoized? Should I keep a reference from the constructor?
+      return new GosuScriptEngineFactory();
     }
 
     private static IGosuProgramParser getParser() {
-        return ParserHolder.GOSU_PARSER;
+      return ParserHolder.GOSU_PARSER;
     }
 
-    // TODO: can we reuse a parser?
-    private static class ParserHolder {
-        private static final IGosuProgramParser GOSU_PARSER = GosuParserFactory.createProgramParser();
+  @Override
+  public Object invokeMethod(Object thiz, String name, Object... args) throws ScriptException, NoSuchMethodException {
+    return ReflectUtil.invokeMethod( thiz, name, args );
+  }
+
+  @Override
+  public Object invokeFunction(String name, Object... args) throws ScriptException, NoSuchMethodException {
+   try {
+     for( Method m : _programInstance.getClass().getDeclaredMethods() ) {
+       if( m.getName().equals( name ) ) { // TODO match signature also?
+         Object[] args2 = new Object[args.length + 1];
+         System.arraycopy( args, 0, args2, 1, args.length );
+         args2[0] = new ExternalSymbolMapSymbolTableWrapper(_symbolTable);
+         m.setAccessible( true );
+         return m.invoke( _programInstance, args2 );
+       }
+     }
+    } catch (Exception e) {
+      throw new ScriptException(e);
     }
+    throw new NoSuchMethodException("Could not find method named " +name);
+  }
+
+  @Override
+  public <T> T getInterface(Class<T> clasz) {
+    throw new UnsupportedOperationException("Not yet implemented.");
+  }
+
+  @Override
+  public <T> T getInterface(Object thiz, Class<T> clasz) {
+    throw new UnsupportedOperationException("Not yet implemented.");
+  }
+
+  // TODO: can we reuse a parser?
+  private static class ParserHolder {
+    private static final IGosuProgramParser GOSU_PARSER = GosuParserFactory.createProgramParser();
+  }
 
 }
