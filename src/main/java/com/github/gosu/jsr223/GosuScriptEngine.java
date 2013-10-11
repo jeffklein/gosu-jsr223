@@ -183,6 +183,9 @@ public class GosuScriptEngine extends AbstractScriptEngine implements Invocable 
    try {
      for( Method m : _programInstance.getClass().getDeclaredMethods() ) {
        if( m.getName().equals( name ) ) { // TODO match signature also?
+           if (args == null) {// TODO: better check for null?
+               args = new Object[0];
+           }
          Object[] args2 = new Object[args.length + 1];
          System.arraycopy( args, 0, args2, 1, args.length );
          args2[0] = new ExternalSymbolMapSymbolTableWrapper(_symbolTable);
@@ -191,7 +194,7 @@ public class GosuScriptEngine extends AbstractScriptEngine implements Invocable 
        }
      }
     } catch (Exception e) {
-      throw new ScriptException(e);
+       throw new ScriptException(e);
     }
     throw new NoSuchMethodException("Could not find method named " +name);
   }
