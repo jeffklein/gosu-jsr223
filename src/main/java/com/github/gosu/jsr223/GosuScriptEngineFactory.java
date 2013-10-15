@@ -15,17 +15,18 @@
  */
 package com.github.gosu.jsr223;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineFactory;
-
 /**
- * A incomplete JSR 223 implementation of {@link ScriptEngineFactory} for the Gosu language. See the
- * comments in {@link GosuScriptEngine} for implementation gotchas.
+ * A mostly-complete JSR 223 implementation of {@link ScriptEngineFactory} for the Gosu language. See the
+ * comments in {@link GosuCompiledScript} for remaining issues.
  * 
  * @author Greg Orlowski
+ * @author Richard Berlin
+ * @author Jeff Klein
  */
 public class GosuScriptEngineFactory implements ScriptEngineFactory {
 
@@ -41,6 +42,7 @@ public class GosuScriptEngineFactory implements ScriptEngineFactory {
 
     static {
         EXTENSIONS.add("gsp");
+      // TODO: should .gs be here also?
     }
 
     private static final List<String> MIME_TYPES = new ArrayList<String>();
@@ -97,14 +99,24 @@ public class GosuScriptEngineFactory implements ScriptEngineFactory {
 
     @Override
     public String getMethodCallSyntax(String obj, String m, String... args) {
-        // TODO Auto-generated method stub
-        return null;
+      final StringBuilder buf = new StringBuilder();
+      boolean first = true;
+      buf.append(obj);
+      buf.append(".");
+      buf.append(m);
+      buf.append("(");
+      for (String s : args) {
+        if (first) first = false; else buf.append(",");
+        buf.append(s);
+      }
+      buf.append(");");
+
+      return buf.toString();
     }
 
     @Override
     public String getOutputStatement(String toDisplay) {
-        // TODO Auto-generated method stub
-        return null;
+      return "print(" + toDisplay + ");";
     }
 
     // ???
@@ -121,7 +133,6 @@ public class GosuScriptEngineFactory implements ScriptEngineFactory {
 
     @Override
     public ScriptEngine getScriptEngine() {
-        return new GosuScriptEngine();
+        return new GosuScriptEngine(this);
     }
-
 }
